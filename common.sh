@@ -9,6 +9,8 @@ ${NODE_IP}    fed-node" >> /etc/hosts
 systemctl disable firewalld
 systemctl stop firewalld
 
+openssl genrsa -out /tmp/serviceaccount.key 2048
+
 function configure_etcd() {
     SELF_IP=$1
 
@@ -123,7 +125,7 @@ KUBE_SERVICE_ADDRESSES="--service-cluster-ip-range=10.254.0.0/16"
 KUBE_ADMISSION_CONTROL="--admission-control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota"
 
 # Add your own!
-KUBE_API_ARGS=""
+KUBE_API_ARGS="--service_account_key_file=/tmp/serviceaccount.key --allow-privileged"
 EOF
 
 cat > /etc/kubernetes/kubelet <<EOF
@@ -146,7 +148,16 @@ KUBELET_API_SERVER="--api-servers=http://fed-master:8080"
 KUBELET_POD_INFRA_CONTAINER="--pod-infra-container-image=registry.access.redhat.com/rhel7/pod-infrastructure:latest"
 
 # Add your own!
-KUBELET_ARGS=""
+KUBELET_ARGS="--allow-privileged"
 EOF
 
+cat > /etc/kubernetes/controller-manager <<EOF
+###
+# The following values are used to configure the kubernetes controller-manager
+
+# defaults from config and apiserver should be adequate
+
+# Add your own!
+KUBE_CONTROLLER_MANAGER_ARGS="--service_account_private_key_file=/tmp/serviceaccount.key"
+EOF
 }
